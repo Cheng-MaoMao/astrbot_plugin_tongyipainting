@@ -9,8 +9,14 @@ import re
 import asyncio
 from http import HTTPStatus
 
-@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "基于阿里云百炼通义万相API的文生图/文生视频/图生视频插件", "1.0.6", "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
-class MyPlugin(Star):
+@register(
+    "astrbot_plugin_tongyipainting",
+    "Cheng-MaoMao",
+    "基于阿里云百炼通义万相API的文生图/文生视频/图生视频插件",
+    "1.0.6",
+    "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting"
+)
+class TongyiPainting(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
@@ -45,7 +51,7 @@ class MyPlugin(Star):
             print(f"安装 dashscope 包失败: {str(e)}")
             raise
     
-    @filter.command("图像生成")
+    @filter.command(["图像生成", "画图"])  # 可以添加多个命令触发词
     async def handle_image_gen(self, event: AstrMessageEvent):
         """处理文生图命令"""
         message = event.message_str.replace("/图像生成", "").strip()
@@ -135,7 +141,7 @@ class MyPlugin(Star):
             print(f"生成图片失败: {str(e)}")
             return None
 
-    @filter.command("视频生成")
+    @filter.command(["视频生成", "生成视频"])  # 可以添加多个命令触发词
     async def handle_video_gen(self, event: AstrMessageEvent):
         """处理文生视频和图生视频命令"""
         message = event.message_str.replace("/视频生成", "").strip()
