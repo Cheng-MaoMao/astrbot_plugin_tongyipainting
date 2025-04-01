@@ -50,9 +50,6 @@ class MyPlugin(Star):
         # 检查是否是文生图命令
         if not message.startswith("文生图"):
             return
-        
-        # 阻止事件继续传播，防止触发其他插件的处理
-        event.stop_propagation()
             
         # 检查是否配置了API密钥
         if not self.api_key:
