@@ -13,7 +13,7 @@ from http import HTTPStatus
     "astrbot_plugin_tongyipainting",
     "Cheng-MaoMao",
     "基于阿里云百炼通义万相API的文生图/文生视频/图生视频插件",
-    "1.0.6",
+    "1.0.7",
     "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting"
 )
 class TongyiPainting(Star):
@@ -54,7 +54,16 @@ class TongyiPainting(Star):
     @filter.command(["图像生成", "画图"])  # 可以添加多个命令触发词
     async def handle_image_gen(self, event: AstrMessageEvent):
         """处理文生图命令"""
-        message = event.message_str.replace("/图像生成", "").strip()
+        # 获取原始消息
+        original_message = event.message_str
+        
+        # 处理多个可能的命令前缀
+        message = original_message
+        for prefix in ["/图像生成", "/画图"]:
+            message = message.replace(prefix, "").strip()
+            if message != original_message:
+                break
+        
         if not message:
             yield event.plain_result("\n请提供绘画内容的描述!")
             return
@@ -144,7 +153,15 @@ class TongyiPainting(Star):
     @filter.command(["视频生成", "生成视频"])  # 可以添加多个命令触发词
     async def handle_video_gen(self, event: AstrMessageEvent):
         """处理文生视频和图生视频命令"""
-        message = event.message_str.replace("/视频生成", "").strip()
+        # 获取原始消息
+        original_message = event.message_str
+        
+        # 处理多个可能的命令前缀
+        message = original_message
+        for prefix in ["/视频生成", "/生成视频"]:
+            message = message.replace(prefix, "").strip()
+            if message != original_message:
+                break
         
         if not message:
             yield event.plain_result("\n请提供视频生成的描述!")
@@ -169,7 +186,7 @@ class TongyiPainting(Star):
             message = message.replace("图生视频", "").strip()
             # 假设图片URL在消息的最后
             url_match = re.search(r'https?://\S+', message)
-            if url_match:
+            if (url_match):
                 image_url = url_match.group()
                 message = message.replace(image_url, "").strip()
             else:
