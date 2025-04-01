@@ -1,6 +1,6 @@
 name: astrbot_plugin_tongyipainting # 这是你的插件的唯一识别名。
 desc: 通过阿里云通义生成绘画。 # 插件简短描述
 help: 输入 /图像生成 生成图像。 # 插件的帮助信息
-version: v1.0.1 # 插件版本号。格式：v1.1.1 或者 v1.1
+version: v1.0.2 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: Cheng-MaoMao # 作者
 repo: https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting # 插件的仓库地址

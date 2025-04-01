@@ -10,7 +10,7 @@ from astrbot.api.star import Context, Star, register
 from astrbot.api.all import *
 from astrbot.api.message_components import *
 
-@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.1", "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
+@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.2", "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
 class TongyiPainting(Star):
     def __init__(self, context: Context, config: dict):
         """初始化插件
@@ -28,12 +28,7 @@ class TongyiPainting(Star):
             self._install_package("dashscope")
 
     def _check_package(self, package: str) -> bool:
-        """检查包是否已安装
-        Args:
-            package: 包名
-        Returns:
-            bool: 是否已安装
-        """
+        """检查包是否已安装"""
         try:
             importlib.import_module(package)
             return True
@@ -41,12 +36,7 @@ class TongyiPainting(Star):
             return False
 
     def _install_package(self, package: str):
-        """安装指定的包
-        Args:
-            package: 要安装的包名
-        Raises:
-            subprocess.CalledProcessError: 安装失败时抛出
-        """
+        """安装指定的包"""
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", package])
             print(f"成功安装 {package}")
@@ -54,30 +44,13 @@ class TongyiPainting(Star):
             print(f"安装 {package} 失败: {str(e)}")
             raise
 
-    @filter.event_message_type(EventMessageType.ALL)
-    async def handle_message(self, event: AstrMessageEvent):
-        """处理接收到的消息
-        Args:
-            event: 消息事件对象
-        """
+    @filter.command("文生图")
+    async def handle_image_generation(self, event: AstrMessageEvent):
         # 检查API密钥是否配置
         if not self.api_key:
             yield event.plain_result("请配置API密钥")
             return
 
-        message = event.message_str
-
-        # 根据触发词判断要调用的功能
-        if any(kw in message for kw in self.image_keywords):
-            await self.handle_image_generation(event, message)
-        elif any(kw in message for kw in self.video_keywords):
-            await self.handle_video_generation(event, message)
-        elif any(kw in message for kw in self.i2v_keywords):
-            await self.handle_image_to_video(event, message)
-
-    @filter.command("文生图")
-    async def handle_image_generation(self, event: AstrMessageEvent):
-        """处理文生图请求"""
         message = event.message_str.strip()
 
         # 检查命令格式
@@ -118,7 +91,11 @@ class TongyiPainting(Star):
 
     @filter.command("文生视频")
     async def handle_video_generation(self, event: AstrMessageEvent):
-        """处理文生视频请求"""
+        # 检查API密钥是否配置
+        if not self.api_key:
+            yield event.plain_result("请配置API密钥")
+            return
+
         message = event.message_str.strip()
 
         # 检查命令格式
@@ -158,9 +135,11 @@ class TongyiPainting(Star):
 
     @filter.command("图生视频")
     async def handle_image_to_video(self, event: AstrMessageEvent):
-        """处理图生视频请求
-        格式：/图生视频 提示词 横图/竖图 [图片]
-        """
+        # 检查API密钥是否配置
+        if not self.api_key:
+            yield event.plain_result("请配置API密钥")
+            return
+
         message = event.message_str
         images = event.get_message_images()
 
