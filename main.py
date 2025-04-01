@@ -158,6 +158,7 @@ class TongyiPainting(Star):
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
 
+    @filter.event_message_type(EventMessageType.ALL)
     @filter.command_group("创作", alias={"通义", "绘画"})
     def creation(self):
         """通义万象AI创作助手"""
