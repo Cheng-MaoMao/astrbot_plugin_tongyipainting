@@ -1,21 +1,41 @@
 {
     "api_key": {
-        "description": "API密钥",
+        "description": "阿里云通义万像API密钥",
         "type": "string",
         "hint": "请填写API密钥",
         "default": "",
-        "obvious_hint": false
+        "obvious_hint": true
     },
     "model": {
-        "description": "通义万相-文生图模型名称",
+        "description": "通义万像模型选择",
         "type": "string",
-        "hint": "通义万相-文生图模型",
+        "hint": "选择要使用的模型",
         "default": "wanx2.1-t2i-turbo",
-        "obvious_hint": false
+        "options": ["wanx2.1-t2i-turbo", "wanx2.1-t2v-turbo", "wanx2.1-i2v-turbo"]
     },
-    "prompt_extend": {
-        "description": "是否开启prompt智能改写,开启后会使用大模型对输入prompt进行智能改写，仅对正向提示词有效。对于较短的输入prompt生成效果提升明显，但会增加3-4秒耗时。",
-        "type": "bool",
-        "default": false
+    "trigger_words": {
+        "description": "触发词配置",
+        "type": "object",
+        "hint": "设置不同功能的触发词",
+        "items": {
+            "image_keywords": {
+                "description": "文生图触发词",
+                "type": "string",
+                "hint": "多个关键词用逗号分隔",
+                "default": "画图,绘画,生成图片"
+            },
+            "video_keywords": {
+                "description": "文生视频触发词",
+                "type": "string",
+                "hint": "多个关键词用逗号分隔",
+                "default": "生成视频,视频生成"
+            },
+            "i2v_keywords": {
+                "description": "图生视频触发词",
+                "type": "string",
+                "hint": "多个关键词用逗号分隔",
+                "default": "图片转视频,转视频"
+            }
+        }
     }
 }

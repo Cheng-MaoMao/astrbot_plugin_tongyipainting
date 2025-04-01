@@ -1,0 +1,9 @@
+# requirements.txt
+# 阿里云通义万像SDK
+dashscope>=1.22.1
+# 网络请求
+requests>=2.28.0
+# 异步支持
+aiohttp>=3.8.0
+# AstrBot相关依赖（如果有特定版本要求请替换）
+astrbot>=1.0.0
