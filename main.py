@@ -1,4 +1,4 @@
-from astrbot.api.event import filter, AstrMessageEvent, EventMessageType
+from astrbot.api.event import filter, AstrMessageEvent  # 移除 EventMessageType
 from astrbot.api.star import Context, Star, register
 from astrbot.api.all import *
 from astrbot.api.message_components import *
@@ -51,23 +51,6 @@ class TongyiPainting(Star):
             print(f"安装 dashscope 包失败: {str(e)}")
             raise
     
-    @filter.event_message_type(EventMessageType.ALL)
-    async def handle_all_messages(self, event: AstrMessageEvent):
-        """监听所有消息并处理图像和视频生成请求"""
-        message = event.message_str
-        
-        # 处理图像生成命令
-        if message.startswith(("/图像生成", "/画图")):
-            async for result in self.handle_image_gen(event):
-                yield result
-            return
-            
-        # 处理视频生成命令
-        if message.startswith(("/视频生成", "/生成视频")):
-            async for result in self.handle_video_gen(event):
-                yield result
-            return
-
     @filter.command(["图像生成", "画图"])  # 可以添加多个命令触发词
     async def handle_image_gen(self, event: AstrMessageEvent):
         """处理文生图命令"""
