@@ -4,6 +4,8 @@ import re
 import subprocess
 import sys
 from dashscope import ImageSynthesis, VideoSynthesis
+from astrbot.api.event import MessageChain
+import astrbot.api.message_components as Comp
 from astrbot.api.message_components import Plain, Image, Video
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
@@ -21,14 +23,7 @@ class TongyiPainting(Star):
         # 保存配置信息
         self.config = config
         self.api_key = config.get("api_key", "")
-        self.model = config.get("model", "wanx2.1-t2i-turbo")
-        self.trigger_words = config.get("trigger_words", {})
-
-        # 初始化各功能的触发词列表
-        self.image_keywords = self.trigger_words.get("image_keywords", "").split(",")
-        self.video_keywords = self.trigger_words.get("video_keywords", "").split(",")
-        self.i2v_keywords = self.trigger_words.get("i2v_keywords", "").split(",")
-
+        
         # 检查并安装必要的依赖包
         if not self._check_package("dashscope"):
             self._install_package("dashscope")
@@ -81,17 +76,22 @@ class TongyiPainting(Star):
         elif any(kw in message for kw in self.i2v_keywords):
             await self.handle_image_to_video(event, message)
 
-    async def handle_image_generation(self, event: AstrMessageEvent, message: str):
-        """处理文生图请求
-        Args:
-            event: 消息事件对象
-            message: 消息内容
-        """
-        # 提取提示词
-        prompt = self._extract_prompt(message)
-        if not prompt:
-            yield event.plain_result("请提供绘画内容描述")
+    @filter.command("文生图")
+    async def handle_image_generation(self, event: AstrMessageEvent):
+        """处理文生图请求"""
+        message = event.message_str.strip()
+
+        # 检查命令格式
+        parts = message.split()
+        if len(parts) != 3 or parts[2] not in ["横图", "竖图"]:
+            yield event.plain_result("请使用正确的命令格式：/文生图 提示词 横图/竖图")
             return
+
+        prompt = parts[1]
+        is_horizontal = parts[2] == "横图"
+
+        # 设置尺寸
+        size = "1920*1080" if is_horizontal else "1080*1920"
 
         yield event.plain_result("正在生成图片，请稍候...")
 
@@ -99,106 +99,107 @@ class TongyiPainting(Star):
             # 调用文生图API
             rsp = ImageSynthesis.async_call(
                 api_key=self.api_key,
-                model=self.model,
+                model=self.config.get("image_model", "wanx2.1-t2i-turbo"),
                 prompt=prompt,
+                prompt_extend=self.config.get("prompt_extend", False),
                 n=1,
-                size="1024*1024"
+                size=size
             )
 
-            # 等待生成完成
             result = await asyncio.to_thread(ImageSynthesis.wait, rsp)
 
             if result.status_code == 200:
-                # 获取生成的图片URL并发送
                 image_url = result.output.results[0].url
-                chain = [
-                    Plain(f"生成完成!\n提示词：{prompt}\n"),
-                    Image.fromURL(image_url)
-                ]
-                yield event.chain_result(chain)
+                yield event.image_result(image_url)
             else:
                 yield event.plain_result(f"生成失败: {result.message}")
 
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
 
-    async def handle_video_generation(self, event: AstrMessageEvent, message: str):
-        """处理文生视频请求
-        Args:
-            event: 消息事件对象
-            message: 消息内容
-        """
-        prompt = self._extract_prompt(message)
-        if not prompt:
-            yield event.plain_result("请提供视频内容描述")
+    @filter.command("文生视频")
+    async def handle_video_generation(self, event: AstrMessageEvent):
+        """处理文生视频请求"""
+        message = event.message_str.strip()
+
+        # 检查命令格式
+        parts = message.split()
+        if len(parts) != 3 or parts[2] not in ["横图", "竖图"]:
+            yield event.plain_result("请使用正确的命令格式：/文生视频 提示词 横图/竖图")
             return
+
+        prompt = parts[1]
+        is_horizontal = parts[2] == "横图"
+
+        # 设置尺寸
+        size = "1920*1080" if is_horizontal else "1080*1920"
 
         yield event.plain_result("正在生成视频，请稍候...")
 
         try:
-            # 调用文生视频API
-            rsp = VideoSynthesis.async_call(
-                api_key=self.api_key,  # 添加api_key参数
-                model='wanx2.1-t2v-turbo',
-                prompt=prompt,
-                size='1280*720'
-            )
-
-            # 等待生成完成
-            result = await asyncio.to_thread(VideoSynthesis.wait, rsp)
-
-            if result.status_code == 200:
-                # 获取生成的视频URL并发送
-                video_url = result.output.video_url
-                # 使用Video.fromURL构建视频消息
-                chain = [
-                    Plain(f"生成完成!\n提示词：{prompt}\n"),
-                    Video.fromURL(url=video_url)  # 明确指定url参数
-                ]
-                yield event.chain_result(chain)
-            else:
-                yield event.plain_result(f"生成失败: {result.message}")
-
-        except Exception as e:
-            yield event.plain_result(f"生成失败: {str(e)}")
-
-    async def handle_image_to_video(self, event: AstrMessageEvent, message: str):
-        """处理图生视频请求
-        Args:
-            event: 消息事件对象
-            message: 消息内容
-        """
-        # 检查是否包含图片
-        images = event.get_message_images()
-        if not images:
-            yield event.plain_result("请提供一张图片")
-            return
-
-        # 提取提示词
-        prompt = self._extract_prompt(message)
-        if not prompt:
-            prompt = "生成一段流畅自然的视频"  # 默认提示词
-
-        yield event.plain_result("正在生成视频，请稍候...")
-
-        try:
-            # 调用图生视频API
             rsp = VideoSynthesis.async_call(
                 api_key=self.api_key,
-                model='wanx2.1-i2v-turbo',
+                model=self.config.get("video_model", "wanx2.1-i2v-turbo"),
                 prompt=prompt,
-                img_url=images[0].url  # 使用第一张图片的URL
+                prompt_extend=self.config.get("prompt_extend", False),
+                size=size
             )
 
-            # 等待生成完成
             result = await asyncio.to_thread(VideoSynthesis.wait, rsp)
 
             if result.status_code == 200:
-                # 获取生成的视频URL并发送
+                video_url = result.output.video_url
+                message_chain = MessageChain().message(f"生成完成!\n提示词：{prompt}").video(video_url)
+                await self.context.send_message(event.unified_msg_origin, message_chain)
+            else:
+                yield event.plain_result(f"生成失败: {result.message}")
+
+        except Exception as e:
+            yield event.plain_result(f"生成失败: {str(e)}")
+
+    @filter.command("图生视频")
+    async def handle_image_to_video(self, event: AstrMessageEvent):
+        """处理图生视频请求
+        格式：/图生视频 提示词 横图/竖图 [图片]
+        """
+        message = event.message_str
+        images = event.get_message_images()
+
+        # 检查命令格式
+        parts = message.split()
+        if len(parts) < 3 or parts[2] not in ["横图", "竖图"]:
+            yield event.plain_result("请使用正确的命令格式：/图生视频 提示词 横图/竖图 [图片]")
+            return
+
+        # 检查是否包含图片
+        if not images:
+            yield event.plain_result("请在命令后附带一张图片")
+            return
+
+        prompt = parts[1]
+        is_horizontal = parts[2] == "横图"
+        size = "1920*1080" if is_horizontal else "1080*1920"
+
+        yield event.plain_result("正在生成视频，请稍候...")
+
+        try:
+            # API调用
+            rsp = VideoSynthesis.async_call(
+                api_key=self.api_key,
+                model=self.config.get("video_model", "wanx2.1-i2v-turbo"),
+                prompt=prompt,
+                prompt_extend=self.config.get("prompt_extend", False),
+                img_url=images[0].url,
+                size=size
+            )
+
+            result = await asyncio.to_thread(VideoSynthesis.wait, rsp)
+
+            if result.status_code == 200:
                 video_url = result.output.video_url
                 chain = [
                     Plain(f"生成完成!\n提示词：{prompt}\n"),
-                    Video.fromURL(url=video_url)  # 明确指定url参数
+                    Video.fromURL(video_url)
                 ]
                 yield event.chain_result(chain)
             else:

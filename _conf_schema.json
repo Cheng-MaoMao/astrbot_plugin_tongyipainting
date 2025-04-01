@@ -6,36 +6,24 @@
         "default": "",
         "obvious_hint": true
     },
-    "model": {
-        "description": "通义万像模型选择",
-        "type": "string",
-        "hint": "选择要使用的模型",
-        "default": "wanx2.1-t2i-turbo",
-        "options": ["wanx2.1-t2i-turbo", "wanx2.1-t2v-turbo", "wanx2.1-i2v-turbo"]
+    "prompt_extend": {
+        "description": "是否开启prompt智能改写",
+        "type": "bool",
+        "hint": "开启后会使用大模型对输入prompt进行智能改写，可提升生成效果但会增加耗时",
+        "default": false
     },
-    "trigger_words": {
-        "description": "触发词配置",
-        "type": "object",
-        "hint": "设置不同功能的触发词",
-        "items": {
-            "image_keywords": {
-                "description": "文生图触发词",
-                "type": "string",
-                "hint": "多个关键词用逗号分隔",
-                "default": "画图,绘画,生成图片"
-            },
-            "video_keywords": {
-                "description": "文生视频触发词",
-                "type": "string",
-                "hint": "多个关键词用逗号分隔",
-                "default": "生成视频,视频生成"
-            },
-            "i2v_keywords": {
-                "description": "图生视频触发词",
-                "type": "string",
-                "hint": "多个关键词用逗号分隔",
-                "default": "图片转视频,转视频"
-            }
-        }
+    "image_model": {
+        "description": "文生图模型选择",
+        "type": "string",
+        "hint": "选择要使用的文生图模型",
+        "default": "wanx2.1-t2i-turbo",
+        "options": ["wanx2.1-t2i-turbo", "wanx2.1-t2i-plus"]
+    },
+    "video_model": {
+        "description": "视频模型选择",
+        "type": "string",
+        "hint": "选择要使用的视频模型",
+        "default": "wanx2.1-i2v-turbo",
+        "options": ["wanx2.1-i2v-turbo", "wanx2.1-i2v-plus"]
     }
 }
