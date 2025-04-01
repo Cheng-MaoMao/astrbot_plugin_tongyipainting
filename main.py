@@ -1,204 +1,200 @@
+from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.star import Context, Star, register
+from astrbot.api.all import *
+from astrbot.api.message_components import *
 import subprocess
 import sys
 import importlib
 import re
 import asyncio
+from http import HTTPStatus
 
-from dashscope import ImageSynthesis, VideoSynthesis
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
-from astrbot.api.star import Context, Star, register
-from astrbot.api.all import *
-from astrbot.api.message_components import *
-
-
-
-@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.5",
-          "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
-class TongyiPainting(Star):
+@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "基于阿里云百炼通义万相API的文生图/文生视频/图生视频插件", "1.0.6", "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
+class MyPlugin(Star):
     def __init__(self, context: Context, config: dict):
-        """初始化插件"""
         super().__init__(context)
         self.config = config
         self.api_key = config.get("api_key", "")
+        self.image_model = config.get("image_model", "wanx2.1-t2i-turbo")
+        self.t2v_model = config.get("t2v_model", "wanx2.1-t2v-turbo")
+        self.i2v_model = config.get("i2v_model", "wanx2.1-i2v-turbo")
+        self.prompt_extend = config.get("prompt_extend", False)
 
-        # 检查并安装必要的依赖包
-        if not self._check_package("dashscope"):
-            self._install_package("dashscope")
-
-    def _check_package(self, package: str) -> bool:
+        # 检查并安装 dashscope
+        if not self._check_dashscope():
+            self._install_dashscope()
+        
+        # 导入必要的模块
+        global ImageSynthesis, VideoSynthesis
+        from dashscope import ImageSynthesis, VideoSynthesis
+    
+    def _check_dashscope(self) -> bool:
+        """检查是否安装了 dashscope"""
         try:
-            importlib.import_module(package)
+            importlib.import_module('dashscope')
             return True
         except ImportError:
             return False
 
-    def _install_package(self, package: str):
+    def _install_dashscope(self):
+        """安装 dashscope 包"""
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", package])
-            print(f"成功安装 {package}")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "dashscope"])
+            print("成功安装 dashscope 包")
         except subprocess.CalledProcessError as e:
-            print(f"安装 {package} 失败: {str(e)}")
+            print(f"安装 dashscope 包失败: {str(e)}")
             raise
-
-    async def text_to_image(self, event: AstrMessageEvent, prompt: str = "", mode: str = ""):
-        """处理文生图请求"""
+    
+    @filter.command("图像生成")
+    async def handle_image_gen(self, event: AstrMessageEvent):
+        """处理文生图命令"""
+        message = event.message_str.replace("/图像生成", "").strip()
+        if not message:
+            yield event.plain_result("\n请提供绘画内容的描述!")
+            return
+            
+        # 检查是否配置了API密钥
         if not self.api_key:
-            yield event.plain_result("请配置API密钥")
+            yield event.plain_result("\n请联系管理员配置API密钥")
             return
 
-        if not prompt or mode not in ["横图", "竖图"]:
-            yield event.plain_result("请使用正确的命令格式：/文生图 提示词 横图/竖图")
-            return
-
-        size = "1920*1080" if mode == "横图" else "1080*1920"
-        yield event.plain_result("正在生成图片，请稍候...")
+        # 检查方向参数
+        size = "1280*720"  # 默认横屏
+        if "竖着" in message:
+            size = "720*1280"
+            message = message.replace("竖着", "").strip()
+        elif "横着" in message:
+            message = message.replace("横着", "").strip()
+        
+        # 发送正在生成的提示
+        yield event.plain_result("\n正在生成图片，请稍候...")
 
         try:
-            rsp = ImageSynthesis.async_call(
+            # 调用同步图像生成方法
+            response = ImageSynthesis.call(
                 api_key=self.api_key,
-                model=self.config.get("image_model", "wanx2.1-t2i-turbo"),
-                prompt=prompt,
-                prompt_extend=self.config.get("prompt_extend", False),
+                model=self.image_model,
+                prompt=message,
                 n=1,
                 size=size
             )
-
-            result = await asyncio.to_thread(ImageSynthesis.wait, rsp)
-
-            if result.status_code == 200:
-                image_url = result.output.results[0].url
+            
+            if response.status_code == HTTPStatus.OK:
+                image_url = response.output.results[0].url
                 chain = [
-                    Plain(f"生成完成!\n提示词：{prompt}\n"),
+                    Plain(f"\n提示词：{message}\n方向：{'竖版' if size=='720*1280' else '横版'}\n"),
                     Image.fromURL(image_url)
                 ]
                 yield event.chain_result(chain)
             else:
-                yield event.plain_result(f"生成失败: {result.message}")
+                error_msg = (f"\n生成图片失败:\n"
+                            f"HTTP状态码: {response.status_code}\n"
+                            f"错误代码: {response.code}\n"
+                            f"错误信息: {response.message}")
+                yield event.plain_result(error_msg)
 
         except Exception as e:
-            yield event.plain_result(f"生成失败: {str(e)}")
+            error_msg = (f"\n生成图片时发生错误:\n"
+                        f"错误类型: {type(e).__name__}\n"
+                        f"错误信息: {str(e)}")
+            yield event.plain_result(error_msg)
+    
+    async def generate_image_async(self, prompt, negative_prompt, size):
+        """异步生成图像并返回图像URL"""
+        try:
+            # 转换尺寸格式，DashScope API 使用 "width*height"
+            api_size = size.replace('x', '*')
+            
+            # 创建异步任务
+            task_rsp = ImageSynthesis.async_call(
+                api_key=self.api_key,
+                model=self.image_model,
+                prompt=prompt,
+                negative_prompt=negative_prompt if negative_prompt else None,
+                n=1,
+                size=api_size
+            )
+            
+            if task_rsp.status_code != 200:
+                raise Exception(f"任务提交失败: {task_rsp.message}")
+            
+            # 等待任务完成
+            result_rsp = await asyncio.to_thread(ImageSynthesis.wait, task_rsp, api_key=self.api_key)
+            
+            if result_rsp.status_code == 200:
+                results = result_rsp.output.results
+                if results:
+                    image_url = results[0].url
+                    return image_url
+                else:
+                    raise Exception("任务成功，但没有返回图像结果")
+            else:
+                raise Exception(f"任务失败: {result_rsp.message}")
+        
+        except Exception as e:
+            print(f"生成图片失败: {str(e)}")
+            return None
 
-    async def text_to_video(self, event: AstrMessageEvent, prompt: str = "", mode: str = ""):
-        """处理文生视频请求"""
+    @filter.command("视频生成")
+    async def handle_video_gen(self, event: AstrMessageEvent):
+        """处理文生视频和图生视频命令"""
+        message = event.message_str.replace("/视频生成", "").strip()
+        
+        if not message:
+            yield event.plain_result("\n请提供视频生成的描述!")
+            return
+            
         if not self.api_key:
-            yield event.plain_result("请配置API密钥")
+            yield event.plain_result("\n请联系管理员配置API密钥")
             return
 
-        if not prompt or mode not in ["横图", "竖图"]:
-            yield event.plain_result("请使用正确的命令格式：/文生视频 提示词 横图/竖图")
-            return
+        # 检查方向参数
+        size = "1280*720"  # 默认横屏
+        if "竖着" in message:
+            size = "720*1280"
+            message = message.replace("竖着", "").strip()
+        elif "横着" in message:
+            message = message.replace("横着", "").strip()
 
-        size = "1920*1080" if mode == "横图" else "1080*1920"
-        yield event.plain_result("正在生成视频，请稍候...")
+        # 检查是否是图生视频
+        image_url = None
+        if "图生视频" in message:
+            # 提取图片URL
+            message = message.replace("图生视频", "").strip()
+            # 假设图片URL在消息的最后
+            url_match = re.search(r'https?://\S+', message)
+            if url_match:
+                image_url = url_match.group()
+                message = message.replace(image_url, "").strip()
+            else:
+                yield event.plain_result("\n请提供有效的图片URL!")
+                return
+
+        yield event.plain_result("\n正在生成视频，请稍候...")
 
         try:
-            rsp = VideoSynthesis.async_call(
-                api_key=self.api_key,
-                model=self.config.get("video_model", "wanx2.1-i2v-turbo"),
-                prompt=prompt,
-                prompt_extend=self.config.get("prompt_extend", False),
-                size=size
-            )
+            if image_url:  # 图生视频
+                response = VideoSynthesis.call(
+                    model=self.i2v_model,
+                    prompt=message,
+                    img_url=image_url
+                )
+            else:  # 文生视频
+                response = VideoSynthesis.call(
+                    model=self.t2v_model,
+                    prompt=message,
+                    size=size
+                )
 
-            result = await asyncio.to_thread(VideoSynthesis.wait, rsp)
-
-            if result.status_code == 200:
-                video_url = result.output.video_url
+            if response.status_code == HTTPStatus.OK:
+                video_url = response.output.video_url
                 chain = [
-                    Plain(f"生成完成!\n提示词：{prompt}\n"),
+                    Plain(f"\n提示词：{message}\n"),
                     Video.fromURL(video_url)
                 ]
                 yield event.chain_result(chain)
             else:
-                yield event.plain_result(f"生成失败: {result.message}")
+                yield event.plain_result(f"\n生成视频失败: {response.message}")
 
         except Exception as e:
-            yield event.plain_result(f"生成失败: {str(e)}")
-
-    async def image_to_video(self, event: AstrMessageEvent, prompt: str = "", mode: str = ""):
-        """处理图生视频请求"""
-        if not self.api_key:
-            yield event.plain_result("请配置API密钥")
-            return
-
-        if not prompt or mode not in ["横图", "竖图"]:
-            yield event.plain_result("请使用正确的命令格式：/图生视频 提示词 横图/竖图 [图片]")
-            return
-
-        images = event.get_message_images()
-        if not images:
-            yield event.plain_result("请在命令后附带一张图片")
-            return
-
-        size = "1920*1080" if mode == "横图" else "1080*1920"
-        yield event.plain_result("正在生成视频，请稍候...")
-
-        try:
-            rsp = VideoSynthesis.async_call(
-                api_key=self.api_key,
-                model=self.config.get("video_model", "wanx2.1-i2v-turbo"),
-                prompt=prompt,
-                prompt_extend=self.config.get("prompt_extend", False),
-                img_url=images[0].url,
-                size=size
-            )
-
-            result = await asyncio.to_thread(VideoSynthesis.wait, rsp)
-
-            if result.status_code == 200:
-                video_url = result.output.video_url
-                chain = [
-                    Plain(f"生成完成!\n提示词：{prompt}\n"),
-                    Video.fromURL(video_url)
-                ]
-                yield event.chain_result(chain)
-            else:
-                yield event.plain_result(f"生成失败: {result.message}")
-
-        except Exception as e:
-            yield event.plain_result(f"生成失败: {str(e)}")
-
-    @filter.event_message_type(EventMessageType.ALL)
-    @filter.command_group("创作", alias={"通义", "绘画"})
-    def creation(self):
-        """通义万象AI创作助手"""
-        pass
-
-    @creation.command("文生图")
-    async def text_to_image_cmd(self, event: AstrMessageEvent, prompt: str, mode: str):
-        """文本生成图片命令"""
-        async for result in self.text_to_image(event, prompt, mode):
-            yield result
-
-    @creation.command("文生视频")
-    async def text_to_video_cmd(self, event: AstrMessageEvent, prompt: str, mode: str):
-        """文本生成视频命令"""
-        async for result in self.text_to_video(event, prompt, mode):
-            yield result
-
-    @creation.command("图生视频")
-    async def image_to_video_cmd(self, event: AstrMessageEvent, prompt: str, mode: str):
-        """图片生成视频命令"""
-        async for result in self.image_to_video(event, prompt, mode):
-            yield result
-
-    @creation.command("帮助", alias={"help", "说明"})
-    async def show_help(self, event: AstrMessageEvent):
-        """显示帮助信息"""
-        help_text = """🎨 通义万象AI创作助手
-    支持文生图、文生视频、图生视频功能
-
-    📝 命令格式：
-    1. 文生图：/创作 文生图 提示词 横图/竖图
-       示例：/创作 文生图 一只可爱的猫咪 横图
-
-    2. 文生视频：/创作 文生视频 提示词 横图/竖图
-       示例：/创作 文生视频 海浪拍打沙滩 竖图
-
-    3. 图生视频：/创作 图生视频 提示词 横图/竖图 [图片]
-       示例：/创作 图生视频 人物走路动作 横图 [需要附带一张图片]
-
-    📐 尺寸说明：
-    - 横图：16:9 (1920*1080)
-    - 竖图：9:16 (1080*1920)"""
-        yield event.plain_result(help_text)
+            yield event.plain_result(f"\n生成视频时发生错误: {str(e)}")

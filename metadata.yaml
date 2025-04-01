@@ -1,5 +1,28 @@
 name: astrbot_plugin_tongyipainting
-desc: 通过阿里云通义万象生成绘画和视频
-version: v1.0.5
+desc: 基于阿里云百炼通义万相API的文生图/文生视频/图生视频插件
+help: |
+  📝 使用说明：
+  1. 文生图命令：
+     /图像生成 [提示词] [方向]
+     - 方向可选：横着/竖着，默认横着
+     示例：/图像生成 一只猫在草地上奔跑 竖着
+
+  2. 文生视频命令：
+     /视频生成 [提示词] [方向]
+     - 方向可选：横着/竖着，默认横着
+     示例：/视频生成 一只小猫在月光下奔跑 横着
+
+  3. 图生视频命令：
+     /视频生成 [提示词] 图生视频 [图片URL]
+     示例：/视频生成 奔跑的猫咪 图生视频 https://example.com/cat.jpg
+
+  💡 注意：
+  - 生成可能需要一定时间，请耐心等待
+  - 建议使用具体、清晰的描述词以获得更好的效果
+version: v1.0.6
 author: Cheng-MaoMao
 repo: https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting
+tags:
+  - AI绘图
+  - 视频生成
+  - 通义万相
