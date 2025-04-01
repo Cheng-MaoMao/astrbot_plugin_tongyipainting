@@ -158,46 +158,46 @@ class TongyiPainting(Star):
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
 
-    @filter.event_message_type(EventMessageType.ALL)
-    async def handle_message(self, event: AstrMessageEvent, **kwargs):
-        """处理所有消息"""
-        message = event.message_str
+    @filter.command_group("创作", alias={"通义", "绘画"})
+    def creation(self):
+        """通义万象AI创作助手"""
+        pass
 
-        # 解析命令
-        parts = message.split()
-        if not parts:
-            return
+    @creation.command("文生图")
+    async def text_to_image_cmd(self, event: AstrMessageEvent, prompt: str, mode: str):
+        """文本生成图片命令"""
+        async for result in self.text_to_image(event, prompt, mode):
+            yield result
 
-        command = parts[0].lstrip('/')
+    @creation.command("文生视频")
+    async def text_to_video_cmd(self, event: AstrMessageEvent, prompt: str, mode: str):
+        """文本生成视频命令"""
+        async for result in self.text_to_video(event, prompt, mode):
+            yield result
 
-        # 根据命令调用相应的处理函数
-        if command == "文生图" and len(parts) >= 3:
-            async for result in self.text_to_image(event, parts[1], parts[2]):
-                yield result
+    @creation.command("图生视频")
+    async def image_to_video_cmd(self, event: AstrMessageEvent, prompt: str, mode: str):
+        """图片生成视频命令"""
+        async for result in self.image_to_video(event, prompt, mode):
+            yield result
 
-        elif command == "文生视频" and len(parts) >= 3:
-            async for result in self.text_to_video(event, parts[1], parts[2]):
-                yield result
-
-        elif command == "图生视频" and len(parts) >= 3:
-            async for result in self.image_to_video(event, parts[1], parts[2]):
-                yield result
-
-        elif command == "生图帮助":
-            help_text = """🎨 通义万象AI创作助手
+    @creation.command("帮助", alias={"help", "说明"})
+    async def show_help(self, event: AstrMessageEvent):
+        """显示帮助信息"""
+        help_text = """🎨 通义万象AI创作助手
     支持文生图、文生视频、图生视频功能
 
     📝 命令格式：
-    1. 文生图：/文生图 提示词 横图/竖图
-       示例：/文生图 一只可爱的猫咪 横图
+    1. 文生图：/创作 文生图 提示词 横图/竖图
+       示例：/创作 文生图 一只可爱的猫咪 横图
 
-    2. 文生视频：/文生视频 提示词 横图/竖图
-       示例：/文生视频 海浪拍打沙滩 竖图
+    2. 文生视频：/创作 文生视频 提示词 横图/竖图
+       示例：/创作 文生视频 海浪拍打沙滩 竖图
 
-    3. 图生视频：/图生视频 提示词 横图/竖图 [图片]
-       示例：/图生视频 人物走路动作 横图 [需要附带一张图片]
+    3. 图生视频：/创作 图生视频 提示词 横图/竖图 [图片]
+       示例：/创作 图生视频 人物走路动作 横图 [需要附带一张图片]
 
     📐 尺寸说明：
     - 横图：16:9 (1920*1080)
     - 竖图：9:16 (1080*1920)"""
-            yield event.plain_result(help_text)
+        yield event.plain_result(help_text)
