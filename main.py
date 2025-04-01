@@ -48,7 +48,7 @@ class MyPlugin(Star):
         message = event.message_str
         
         # 检查是否是文生图命令
-        if not message.startswith("/文生图"):
+        if not message.startswith("文生图"):
             return
             
         # 检查是否配置了API密钥
@@ -57,9 +57,9 @@ class MyPlugin(Star):
             return
 
         # 移除命令前缀并检查格式
-        message = message.replace("/文生图", "").strip()
+        message = message.replace("文生图", "").strip()
         if not message or message == "横着" or message == "竖着":
-            yield event.plain_result("\n请按照正确格式：/文生图 提示词 横着/竖着")
+            yield event.plain_result("\n请按照正确格式：文生图 提示词 横着/竖着")
             return
         
         # 设置图片尺寸
@@ -73,7 +73,7 @@ class MyPlugin(Star):
         # 获取提示词
         prompt = message.strip()
         if not prompt:
-            yield event.plain_result("\n请按照正确格式：/文生图 提示词 横着/竖着")
+            yield event.plain_result("\n请按照正确格式：文生图 提示词 横着/竖着")
             return
 
         # 发送正在生成的提示
