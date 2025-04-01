@@ -93,14 +93,21 @@ class MyPlugin(Star):
     async def generate_image_async(self, prompt, negative_prompt, size):
         """异步生成图像并返回图像URL"""
         try:
+            # 如果启用了prompt_extend，则添加该参数
+            params = {
+                "api_key": self.api_key,
+                "model": self.model,
+                "prompt": prompt,
+                "n": 1,
+                "size": size,
+                "prompt_extend": self.prompt_extend
+            }
+            
+            if negative_prompt:
+                params["negative_prompt"] = negative_prompt
+            
             # 创建异步任务
-            task_rsp = ImageSynthesis.async_call(
-                api_key=self.api_key,
-                model=self.model,
-                prompt=prompt,
-                n=1,
-                size=size
-            )
+            task_rsp = ImageSynthesis.async_call(**params)
             
             if task_rsp.status_code != 200:
                 raise Exception(f"任务提交失败: {task_rsp.message}")
@@ -110,9 +117,8 @@ class MyPlugin(Star):
             
             if result_rsp.status_code == 200:
                 results = result_rsp.output.results
-                if results:
-                    image_url = results[0].url
-                    return image_url
+                if results and results[0].url:
+                    return results[0].url
                 else:
                     raise Exception("任务成功，但没有返回图像结果")
             else:
