@@ -11,7 +11,7 @@ from astrbot.api.message_components import Plain, Image, Video
 from astrbot.api.event import MessageChain
 
 
-@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.3",
+@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.4",
           "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
 class TongyiPainting(Star):
     def __init__(self, context: Context, config: dict):
@@ -159,3 +159,24 @@ class TongyiPainting(Star):
 
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
+
+    @filter.command("生图帮助")
+    async def show_help(self, event: AstrMessageEvent):
+        """显示插件帮助信息"""
+        help_text = """🎨 通义万象AI创作助手
+    支持文生图、文生视频、图生视频功能
+
+    📝 命令格式：
+    1. 文生图：/文生图 提示词 横图/竖图
+       示例：/文生图 一只可爱的猫咪 横图
+
+    2. 文生视频：/文生视频 提示词 横图/竖图
+       示例：/文生视频 海浪拍打沙滩 竖图
+
+    3. 图生视频：/图生视频 提示词 横图/竖图 [图片]
+       示例：/图生视频 人物走路动作 横图 [需要附带一张图片]
+
+    📐 尺寸说明：
+    - 横图：16:9 (1920*1080)
+    - 竖图：9:16 (1080*1920)"""
+        yield event.plain_result(help_text)
