@@ -4,18 +4,22 @@ help: |
    📝 使用说明：
    1. 文生图命令：
       /图像生成 [提示词] [方向]
+      /画图 [提示词] [方向]
       - 方向可选：横着/竖着，默认横着
       示例：/图像生成 一只猫在草地上奔跑 竖着
 
    2. 文生视频命令：
       /视频生成 [提示词] [方向]
+      /生成视频 [提示词] [方向]
       - 方向可选：横着/竖着，默认横着
       示例：/视频生成 一只小猫在月光下奔跑 横着
 
    3. 图生视频命令：
       /视频生成 [提示词] 图生视频 [图片URL]
       示例：/视频生成 奔跑的猫咪 图生视频 https://example.com/cat.jpg
-version: v1.0.7
+
+   ⚠️ 注意：命令必须以斜杠(/)开头
+version: v1.0.8
 author: Cheng-MaoMao
 repo: https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting
 tags:

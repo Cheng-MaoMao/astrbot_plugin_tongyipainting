@@ -1,4 +1,4 @@
-from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.event import filter, AstrMessageEvent, EventMessageType
 from astrbot.api.star import Context, Star, register
 from astrbot.api.all import *
 from astrbot.api.message_components import *
@@ -13,7 +13,7 @@ from http import HTTPStatus
     "astrbot_plugin_tongyipainting",
     "Cheng-MaoMao",
     "基于阿里云百炼通义万相API的文生图/文生视频/图生视频插件",
-    "1.0.7",
+    "1.0.8",
     "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting"
 )
 class TongyiPainting(Star):
@@ -51,17 +51,32 @@ class TongyiPainting(Star):
             print(f"安装 dashscope 包失败: {str(e)}")
             raise
     
+    @filter.event_message_type(EventMessageType.ALL)
+    async def handle_all_messages(self, event: AstrMessageEvent):
+        """监听所有消息并处理图像和视频生成请求"""
+        message = event.message_str
+        
+        # 处理图像生成命令
+        if message.startswith(("/图像生成", "/画图")):
+            async for result in self.handle_image_gen(event):
+                yield result
+            return
+            
+        # 处理视频生成命令
+        if message.startswith(("/视频生成", "/生成视频")):
+            async for result in self.handle_video_gen(event):
+                yield result
+            return
+
     @filter.command(["图像生成", "画图"])  # 可以添加多个命令触发词
     async def handle_image_gen(self, event: AstrMessageEvent):
         """处理文生图命令"""
-        # 获取原始消息
-        original_message = event.message_str
+        message = event.message_str
         
-        # 处理多个可能的命令前缀
-        message = original_message
+        # 移除命令前缀
         for prefix in ["/图像生成", "/画图"]:
-            message = message.replace(prefix, "").strip()
-            if message != original_message:
+            if message.startswith(prefix):
+                message = message[len(prefix):].strip()
                 break
         
         if not message:
@@ -153,14 +168,12 @@ class TongyiPainting(Star):
     @filter.command(["视频生成", "生成视频"])  # 可以添加多个命令触发词
     async def handle_video_gen(self, event: AstrMessageEvent):
         """处理文生视频和图生视频命令"""
-        # 获取原始消息
-        original_message = event.message_str
+        message = event.message_str
         
-        # 处理多个可能的命令前缀
-        message = original_message
+        # 移除命令前缀
         for prefix in ["/视频生成", "/生成视频"]:
-            message = message.replace(prefix, "").strip()
-            if message != original_message:
+            if message.startswith(prefix):
+                message = message[len(prefix):].strip()
                 break
         
         if not message:
