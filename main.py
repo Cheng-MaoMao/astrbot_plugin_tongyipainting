@@ -1,17 +1,18 @@
 import subprocess
 import sys
 import importlib
+import re
 import asyncio
 
-from typing import Optional, List
 from dashscope import ImageSynthesis, VideoSynthesis
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
-from astrbot.api.message_components import Plain, Image, Video
-from astrbot.api.event import MessageChain
+from astrbot.api.all import *
+from astrbot.api.message_components import *
 
 
-@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.4",
+
+@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.5",
           "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
 class TongyiPainting(Star):
     def __init__(self, context: Context, config: dict):
@@ -39,7 +40,6 @@ class TongyiPainting(Star):
             print(f"安装 {package} 失败: {str(e)}")
             raise
 
-    @filter.command("文生图")
     async def text_to_image(self, event: AstrMessageEvent, prompt: str = "", mode: str = ""):
         """处理文生图请求"""
         if not self.api_key:
@@ -78,7 +78,6 @@ class TongyiPainting(Star):
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
 
-    @filter.command("文生视频")
     async def text_to_video(self, event: AstrMessageEvent, prompt: str = "", mode: str = ""):
         """处理文生视频请求"""
         if not self.api_key:
@@ -116,7 +115,6 @@ class TongyiPainting(Star):
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
 
-    @filter.command("图生视频")
     async def image_to_video(self, event: AstrMessageEvent, prompt: str = "", mode: str = ""):
         """处理图生视频请求"""
         if not self.api_key:
@@ -160,10 +158,33 @@ class TongyiPainting(Star):
         except Exception as e:
             yield event.plain_result(f"生成失败: {str(e)}")
 
-    @filter.command("生图帮助")
-    async def show_help(self, event: AstrMessageEvent):
-        """显示插件帮助信息"""
-        help_text = """🎨 通义万象AI创作助手
+    @filter.event_message_type(EventMessageType.ALL)
+    async def handle_message(self, event: AstrMessageEvent, **kwargs):
+        """处理所有消息"""
+        message = event.message_str
+
+        # 解析命令
+        parts = message.split()
+        if not parts:
+            return
+
+        command = parts[0].lstrip('/')
+
+        # 根据命令调用相应的处理函数
+        if command == "文生图" and len(parts) >= 3:
+            async for result in self.text_to_image(event, parts[1], parts[2]):
+                yield result
+
+        elif command == "文生视频" and len(parts) >= 3:
+            async for result in self.text_to_video(event, parts[1], parts[2]):
+                yield result
+
+        elif command == "图生视频" and len(parts) >= 3:
+            async for result in self.image_to_video(event, parts[1], parts[2]):
+                yield result
+
+        elif command == "生图帮助":
+            help_text = """🎨 通义万象AI创作助手
     支持文生图、文生视频、图生视频功能
 
     📝 命令格式：
@@ -179,4 +200,4 @@ class TongyiPainting(Star):
     📐 尺寸说明：
     - 横图：16:9 (1920*1080)
     - 竖图：9:16 (1080*1920)"""
-        yield event.plain_result(help_text)
+            yield event.plain_result(help_text)
