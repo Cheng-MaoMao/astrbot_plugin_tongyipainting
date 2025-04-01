@@ -1,17 +1,16 @@
-import asyncio
-import importlib
-import re
 import subprocess
 import sys
+import importlib
+import re
+import asyncio
+
 from dashscope import ImageSynthesis, VideoSynthesis
-from astrbot.api.event import MessageChain
-import astrbot.api.message_components as Comp
-from astrbot.api.message_components import Plain, Image, Video
-from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
+from astrbot.api.all import *
 from astrbot.api.message_components import *
 
-@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.0", "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
+@register("astrbot_plugin_tongyipainting", "Cheng-MaoMao", "通过阿里云通义生成绘画和视频", "1.0.1", "https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting")
 class TongyiPainting(Star):
     def __init__(self, context: Context, config: dict):
         """初始化插件
@@ -23,7 +22,7 @@ class TongyiPainting(Star):
         # 保存配置信息
         self.config = config
         self.api_key = config.get("api_key", "")
-        
+
         # 检查并安装必要的依赖包
         if not self._check_package("dashscope"):
             self._install_package("dashscope")

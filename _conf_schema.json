@@ -16,7 +16,7 @@
         "description": "文生图模型选择",
         "type": "string",
         "hint": "选择要使用的文生图模型",
-        "default": "wanx2.1-t2i-turbo",
+        "default": "wanx2.1-t2i-plus",
         "options": ["wanx2.1-t2i-turbo", "wanx2.1-t2i-plus"]
     },
     "video_model": {
