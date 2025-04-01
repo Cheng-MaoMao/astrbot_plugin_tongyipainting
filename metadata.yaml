@@ -1,6 +1,11 @@
 name: astrbot_plugin_tongyipainting # 这是你的插件的唯一识别名。
 desc: 通过阿里云通义生成绘画 # 插件简短描述
-help: 输入 /文生图 提示词 横着/竖着 # 插件的帮助信息
+help: |
+  使用方法：
+  文生图 提示词 横着/竖着
+  示例：
+  文生图 下雨天的街道 竖着
+  文生图 春天的樱花树 横着
 version: v1.0.0 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: Cheng-MaoMao # 作者
 repo: https://github.com/Cheng-MaoMao/astrbot_plugin_tongyipainting # 插件的仓库地址
